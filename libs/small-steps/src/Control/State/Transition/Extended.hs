@@ -46,6 +46,7 @@ module Control.State.Transition.Extended
     labeledPredE,
     failBecause,
     judgmentContext,
+    currentPF,
     trans,
     liftSTS,
     tellEvent,
@@ -119,7 +120,17 @@ instance RuleTypeRep 'Transition where
 newtype IRC sts = IRC (Environment sts)
 
 -- | Context available to transition rules.
+newtype WideTRC sts = WideTRC (Environment sts, State sts, Signal sts,[PredicateFailure sts])
+
 newtype TRC sts = TRC (Environment sts, State sts, Signal sts)
+
+deriving instance
+  ( Show (Environment sts),
+    Show (State sts),
+    Show (Signal sts),
+    Show (PredicateFailure sts)
+  ) =>
+  Show (WideTRC sts)
 
 deriving instance
   ( Show (Environment sts),
@@ -130,7 +141,7 @@ deriving instance
 
 type family RuleContext (t :: RuleType) = (ctx :: Type -> Type) | ctx -> t where
   RuleContext 'Initial = IRC
-  RuleContext 'Transition = TRC
+  RuleContext 'Transition = WideTRC
 
 type InitialRule sts = Rule sts 'Initial (State sts)
 
@@ -148,15 +159,15 @@ type TransitionRule sts = Rule sts 'Transition (State sts)
 --   Whether assertions are checked is a matter for the STS interpreter.
 data Assertion sts
   = -- | Pre-condition. Checked before the rule fires.
-    PreCondition String (TRC sts -> Bool)
+    PreCondition String (WideTRC sts -> Bool)
   | -- | Post-condition. Checked after the rule fires, and given access
     --   to the resultant state as well as the initial context.
-    PostCondition String (TRC sts -> State sts -> Bool)
+    PostCondition String (WideTRC sts -> State sts -> Bool)
 
 data AssertionViolation sts = AssertionViolation
   { avSTS :: String,
     avMsg :: String,
-    avCtx :: TRC sts,
+    avCtx :: WideTRC sts,
     avState :: Maybe (State sts)
   }
 
@@ -369,9 +380,19 @@ liftSTS ::
 liftSTS f = wrap $ Lift f pure
 
 -- | Get the judgment context
-judgmentContext :: Rule sts rtype (RuleContext rtype sts)
-judgmentContext = wrap $ GetCtx pure
+wideContext :: Rule sts rtype (RuleContext rtype sts)
+wideContext = wrap $ GetCtx pure
 
+judgmentContext :: Rule sts 'Transition (TRC sts)
+judgmentContext = do
+  WideTRC(a,b,c,_) <- wideContext
+  pure(TRC(a,b,c))
+
+currentPF :: Rule sts 'Transition [PredicateFailure sts]
+currentPF = do
+  WideTRC(_,_,_,pf) <- wideContext
+  pure pf
+  
 {------------------------------------------------------------------------------
 -- STS interpreters
 ------------------------------------------------------------------------------}
