@@ -38,7 +38,8 @@ library
   import:             base, project-config
 
   exposed-modules:
-    Test.Cardano.Ledger.Babbage.Serialisation.Generators
+    Test.Cardano.Ledger.Babbage.Serialisation.Generators,
+    Test.Cardano.Ledger.Babbage.Serialisation.CDDL
   build-depends:
     bytestring,
     cardano-binary,
