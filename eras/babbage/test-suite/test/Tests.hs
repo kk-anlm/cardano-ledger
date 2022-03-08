@@ -11,7 +11,7 @@ module Main where
 import qualified Test.Cardano.Ledger.Babbage.Serialisation.Tripping as Tripping
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
-import qualified Test.Cardano.Ledger.Alonzo.Serialisation.CDDL as CDDL
+import qualified Test.Cardano.Ledger.Babbage.Serialisation.CDDL as CDDL
 
 -- ====================================================================================
 
