@@ -128,7 +128,7 @@ import Cardano.Binary
     encodeNull,
     encodeWord,
     matchSize,
-    peekTokenType,
+    peekTokenType, decodeWord64
   )
 import Codec.CBOR.Decoding (Decoder, decodeTag, decodeTag64)
 import Codec.CBOR.Encoding (Encoding, encodeTag)
@@ -620,6 +620,7 @@ data Decode (w :: Wrapped) t where
   Map :: (a -> b) -> Decode w a -> Decode w b
   DD :: Dual t -> Decode ('Closed 'Dense) t
   TagD :: Word -> Decode ('Closed x) t -> Decode ('Closed x) t
+  KeyD :: Word -> Decode ('Closed x) t -> Decode ('Closed x) t
   Emit :: t -> Decode w t
   -- The next two could be generalized to any (Applicative f) rather than Annotator
   Ann :: Decode w t -> Decode w (Annotator t)
@@ -656,6 +657,7 @@ hsize (Map _ x) = hsize x
 hsize (Emit _) = 0
 hsize (SparseKeyed _ _ _ _) = 1
 hsize (TagD _ _) = 1
+hsize (KeyD _ _) = 1
 hsize (Ann x) = hsize x
 hsize (ApplyAnn f x) = hsize f + hsize x
 hsize (ApplyErr f x) = hsize f + hsize x
@@ -679,6 +681,9 @@ decodeCount (DD (Dual _enc dec)) n = (n,) <$> dec
 decodeCount (Emit x) n = pure (n, x)
 decodeCount (TagD expectedTag decoder) n = do
   assertTag expectedTag
+  decodeCount decoder n
+decodeCount (KeyD expectedKey decoder) n = do
+  assertTag expectedKey
   decodeCount decoder n
 decodeCount (SparseKeyed name initial pick required) n =
   (n + 1,) <$> decodeSparse name initial pick required
@@ -716,6 +721,9 @@ decodeClosed (DD (Dual _enc dec)) = dec
 decodeClosed (Emit n) = pure n
 decodeClosed (TagD expectedTag decoder) = do
   assertTag expectedTag
+  decodeClosed decoder
+decodeClosed (KeyD expectedKey decoder) = do
+  assertKey expectedKey
   decodeClosed decoder
 decodeClosed (SparseKeyed name initial pick required) =
   decodeSparse name initial pick required
@@ -945,6 +953,16 @@ assertTag tag = do
       _ -> cborError ("expected tag" :: String)
   when (t /= (fromIntegral tag :: Natural)) $
     cborError ("expecteg tag " <> show tag <> " but got tag " <> show t)
+
+assertKey :: Word -> Decoder s ()
+assertKey key = do
+  t <-
+    peekTokenType >>= \case
+      TypeUInt -> fromIntegral <$> decodeWord
+      TypeUInt64 -> fromIntegral <$> decodeWord64
+      _ -> cborError ("expected key" :: String)
+  when (t /= (fromIntegral key :: Natural)) $
+    cborError ("expecteg key " <> show key <> " but got key " <> show t)
 
 -- | Convert a @Buildable@ error into a 'cborg' decoder error
 cborError :: Buildable e => e -> Decoder s a

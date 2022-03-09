@@ -72,7 +72,7 @@ transaction_input = [ transaction_id : $hash32
                     , index : uint
                     ]
 
-transaction_output = legacy_Transaction_output / post_alonzo_transaction_output ; New
+transaction_output = legacy_transaction_output / post_alonzo_transaction_output ; New
 
 legacy_transaction_output =
   [ address
@@ -80,16 +80,21 @@ legacy_transaction_output =
   , ? datum_hash : $hash32
   ]
 
+datum_hash = $hash3
+
+datum = bytes
+script = bytes
+
 ; Note that in the post_alonzo_transaction_output, we do not allow
 ; a transaction output to include both a datum hash and a datum.
 ; In other words, keys 2 and 3 are mutually exclusive.
 post_alonzo_transaction_output =
-     { 0 => address
-     , 1 => value
-     , ? 2 => datum_hash
-     , ? 3 => datum      ; New; inline datum
-     , ? 4 => script     ; New; script reference
-     }
+  { 0 : address
+  , 1 : value
+  , ? 2 : datum_hash
+  , ? 3 : datum      ; New; inline datum
+  , ? 4 : script     ; New; script reference
+  }
 
 script_data_hash = $hash32
 ; This is a hash of data which may affect evaluation of a script.
