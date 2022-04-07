@@ -48,7 +48,7 @@ import Data.Maybe (mapMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Text (Text)
+import Data.Text (Text, pack)
 import GHC.Records (HasField (..))
 import qualified Plutus.V1.Ledger.Api as PV1
 import qualified Plutus.V2.Ledger.Api as PV2
@@ -218,7 +218,7 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
 
       case interpreter lang (getEvaluationContext cm) maxBudget script pArgs of
         (logs, Left e) -> case lang of
-          PlutusV1 -> Left $ ValidationFailedV1 e logs
+          PlutusV1 -> Left $ ValidationFailedV1 e [pack . show $ PV1.mkTermToEvaluate pv script pArgs]
           PlutusV2 -> Left $ ValidationFailedV2 e logs
         (_, Right exBudget) -> note (IncompatibleBudget exBudget) $ exBudgetToExUnits exBudget
       where
